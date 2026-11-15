@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>Supplier Delay Early-Warning</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17233b;
+      --muted: #64728a;
+      --line: #e2e8f0;
+      --paper: #ffffff;
+      --page: #f5f7fb;
+      --blue: #2e5bcb;
+      --blue-dark: #2349a6;
+      --green: #18794e;
+      --green-bg: #e8f6ee;
+      --yellow: #946200;
+      --yellow-bg: #fff5d8;
+      --red: #b42332;
+      --red-bg: #ffeaec;
+      --shadow: 0 12px 32px rgba(31, 49, 82, .07);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .page-shell {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 46px 0 28px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(120deg, #f8faff, #edf3ff);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--blue);
+      font-size: .76rem;
+      font-weight: 750;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 2.85rem);
+      letter-spacing: -.045em;
+      line-height: 1.12;
+    }
+
+    .subtitle {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 1.08rem;
+    }
+
+    main { padding: 26px 0 44px; }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .button {
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 17px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: background .15s ease, border-color .15s ease, transform .15s ease;
+    }
+
+    .button:hover { transform: translateY(-1px); }
+    .button-primary { background: var(--blue); color: white; }
+    .button-primary:hover { background: var(--blue-dark); }
+    .button-secondary { border-color: #cbd6e7; background: white; color: var(--ink); }
+    .button-secondary:hover { border-color: var(--blue); }
+    .button:focus-visible, .supplier-button:focus-visible {
+      outline: 3px solid #9db8ff;
+      outline-offset: 3px;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      clip-path: inset(50%);
+    }
+
+    .message {
+      display: none;
+      margin: 0 0 20px;
+      padding: 12px 15px;
+      border: 1px solid #f1c7cb;
+      border-radius: 10px;
+      background: #fff4f4;
+      color: #84212b;
+    }
+    .message.visible { display: block; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .card, .panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .summary-card { padding: 20px 22px; }
+    .summary-label { margin: 0; color: var(--muted); font-size: .9rem; font-weight: 650; }
+    .summary-value { margin: 5px 0 0; font-size: 2rem; font-weight: 780; letter-spacing: -.04em; }
+    .summary-note { margin: 2px 0 0; color: var(--muted); font-size: .82rem; }
+
+    .panel { padding: 22px; margin-bottom: 24px; }
+    .panel-heading {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    h2 { margin: 0; font-size: 1.22rem; letter-spacing: -.02em; }
+    .section-note { margin: 0; color: var(--muted); font-size: .86rem; }
+
+    .actions-list {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .action-item {
+      padding: 15px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfcfe;
+    }
+    .action-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .action-name { font-weight: 750; }
+    .action-text { margin: 8px 0 0; color: #3c4b64; font-size: .92rem; }
+    .empty-note { margin: 0; color: var(--muted); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: .8rem;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    .badge-green { background: var(--green-bg); color: var(--green); }
+    .badge-yellow { background: var(--yellow-bg); color: var(--yellow); }
+    .badge-red { background: var(--red-bg); color: var(--red); }
+
+    .table-panel { padding: 0; overflow: hidden; }
+    .table-heading { padding: 21px 22px 14px; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th, td { padding: 14px 16px; border-top: 1px solid var(--line); vertical-align: middle; }
+    th {
+      background: #f8faff;
+      color: #56657d;
+      font-size: .77rem;
+      font-weight: 750;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    td { font-size: .92rem; }
+    tbody tr { cursor: pointer; transition: background .12s ease; }
+    tbody tr:hover, tbody tr[aria-expanded="true"] { background: #f5f8ff; }
+    .supplier-button {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--blue-dark);
+      font-weight: 750;
+      text-align: left;
+    }
+    .supplier-button:hover { text-decoration: underline; }
+    .trend-worse { color: var(--red); font-weight: 700; }
+    .trend-improving { color: var(--green); font-weight: 700; }
+    .trend-stable { color: #5c687b; font-weight: 650; }
+    .empty-row { padding: 24px 18px; color: var(--muted); text-align: center; }
+
+    .history-panel { margin-top: 18px; }
+    .history-panel[hidden] { display: none; }
+    .history-table th, .history-table td { padding: 11px 14px; }
+    .status-late { color: var(--red); font-weight: 700; }
+    .status-on-time { color: var(--green); font-weight: 700; }
+    .download-row { display: flex; justify-content: flex-end; margin-top: 16px; }
+
+    .how-list { margin: 15px 0 0; padding-left: 21px; color: #3c4b64; }
+    .how-list li + li { margin-top: 8px; }
+    .definition-note {
+      margin: 15px 0 0;
+      padding: 12px 14px;
+      border-left: 3px solid #9bb5f7;
+      background: #f5f8ff;
+      color: #465672;
+      font-size: .9rem;
+    }
+
+    footer {
+      padding: 22px 0 28px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: .86rem;
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      .page-shell { width: min(100% - 28px, 600px); }
+      header { padding: 34px 0 24px; }
+      .summary-grid, .actions-list { grid-template-columns: 1fr; }
+      .summary-grid { gap: 11px; }
+      .summary-card { padding: 16px 18px; }
+      .summary-value { font-size: 1.7rem; }
+      .panel { padding: 18px; }
+      .table-panel { padding: 0; }
+      .table-heading { padding: 18px; }
+      th, td { padding: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="page-shell">
+      <p class="eyebrow">Logistics · Early warning</p>
+      <h1>Supplier Delay Early-Warning</h1>
+      <p class="subtitle">Spot risky suppliers before delays reach your customers.</p>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <div class="toolbar" aria-label="Delivery data">
+      <label class="button button-primary" for="csv-file">Upload CSV</label>
+      <input class="visually-hidden" id="csv-file" type="file" accept=".csv,text/csv">
+      <button class="button button-secondary" id="load-sample" type="button">Load sample data</button>
+    </div>
+
+    <p class="message" id="message" role="status" aria-live="polite"></p>
+
+    <section class="summary-grid" aria-label="Delivery summary">
+      <article class="card summary-card">
+        <p class="summary-label">Suppliers</p>
+        <p class="summary-value" id="supplier-count">—</p>
+        <p class="summary-note">In the loaded delivery file</p>
+      </article>
+      <article class="card summary-card">
+        <p class="summary-label">Overall on-time delivery</p>
+        <p class="summary-value" id="on-time-rate">—</p>
+        <p class="summary-note">Across all valid uploaded deliveries</p>
+      </article>
+      <article class="card summary-card">
+        <p class="summary-label">High-risk suppliers</p>
+        <p class="summary-value" id="high-risk-count">—</p>
+        <p class="summary-note">Need the closest attention</p>
+      </article>
+    </section>
+
+    <section class="panel" aria-labelledby="actions-title">
+      <div class="panel-heading">
+        <h2 id="actions-title">Act this week</h2>
+        <p class="section-note">Start with the suppliers that need attention most.</p>
+      </div>
+      <div class="actions-list" id="actions-list">
+        <p class="empty-note">Load sample data or upload a CSV to see suggested actions.</p>
+      </div>
+    </section>
+
+    <section class="panel table-panel" aria-labelledby="suppliers-title">
+      <div class="table-heading panel-heading">
+        <h2 id="suppliers-title">Supplier overview</h2>
+        <p class="section-note" id="table-note">Load data to see supplier risks.</p>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Supplier</th>
+              <th scope="col">Deliveries counted</th>
+              <th scope="col">Late rate</th>
+              <th scope="col">Average days late</th>
+              <th scope="col">Trend</th>
+              <th scope="col">Risk level</th>
+            </tr>
+          </thead>
+          <tbody id="supplier-rows">
+            <tr><td class="empty-row" colspan="6">Upload a CSV or load the sample data to get started.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <section class="panel history-panel" id="history-panel" aria-labelledby="history-title" hidden>
+        <div class="panel-heading">
+          <h2 id="history-title">Delivery history</h2>
+          <p class="section-note" id="history-note"></p>
+        </div>
+        <div class="table-scroll">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th scope="col">Planned date</th>
+                <th scope="col">Actual date</th>
+                <th scope="col">Days late</th>
+                <th scope="col">Late?</th>
+              </tr>
+            </thead>
+            <tbody id="history-rows"></tbody>
+          </table>
+        </div>
+      </section>
+      <div class="download-row">
+        <button class="button button-secondary" id="download-results" type="button" disabled>Download results as CSV</button>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="calculation-title">
+      <h2 id="calculation-title">How the risk is calculated</h2>
+      <ul class="how-list">
+        <li>For each supplier, deliveries are sorted by planned date and we use the latest 10 (or all if there are fewer).</li>
+        <li>A delivery is late when its actual date is after its planned date. Days late is the number of calendar days after the plan; early or on-time deliveries count as 0.</li>
+        <li>Late rate is late deliveries divided by deliveries counted. Average days late uses only late deliveries.</li>
+        <li>Trend compares the latest five deliveries with the five before them: a higher late rate is “Getting worse,” a lower rate is “Improving,” and an equal rate (or too little history to compare) is “Stable.”</li>
+        <li>Risk is “On track” below 10%, “Watch” from 10% through 30%, and “High risk” above 30% or from 20% through 30% when the trend is getting worse.</li>
+      </ul>
+      <p class="definition-note">The overall on-time rate uses all valid deliveries in your file. Supplier risk uses each supplier’s latest 10 deliveries.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="page-shell">Prototype with fictional sample data. Built with GitHub Copilot by Aditi Sonawane.</div>
+  </footer>
+
+  <script>
+    // Sample deliveries are also in sample_data.csv so the demo works without a file upload.
+    const SAMPLE_CSV = `supplier,planned_date,actual_date
+Supplier A (Packaging),2026-04-03,2026-04-03
+Supplier A (Packaging),2026-04-10,2026-04-10
+Supplier A (Packaging),2026-04-17,2026-04-17
+Supplier A (Packaging),2026-04-24,2026-04-24
+Supplier A (Packaging),2026-05-01,2026-05-01
+Supplier A (Packaging),2026-05-08,2026-05-08
+Supplier A (Packaging),2026-05-15,2026-05-15
+Supplier A (Packaging),2026-05-22,2026-05-22
+Supplier A (Packaging),2026-05-29,2026-05-29
+Supplier A (Packaging),2026-06-05,2026-06-05
+Supplier A (Packaging),2026-06-12,2026-06-12
+Supplier A (Packaging),2026-06-19,2026-06-19
+Supplier B (Transport),2026-04-03,2026-04-07
+Supplier B (Transport),2026-04-10,2026-04-10
+Supplier B (Transport),2026-04-17,2026-04-20
+Supplier B (Transport),2026-04-24,2026-04-27
+Supplier B (Transport),2026-05-01,2026-05-01
+Supplier B (Transport),2026-05-08,2026-05-11
+Supplier B (Transport),2026-05-15,2026-05-20
+Supplier B (Transport),2026-05-22,2026-05-25
+Supplier B (Transport),2026-05-29,2026-06-02
+Supplier B (Transport),2026-06-05,2026-06-05
+Supplier B (Transport),2026-06-12,2026-06-16
+Supplier B (Transport),2026-06-19,2026-06-22
+Supplier C (Warehousing),2026-04-03,2026-04-03
+Supplier C (Warehousing),2026-04-10,2026-04-12
+Supplier C (Warehousing),2026-04-17,2026-04-17
+Supplier C (Warehousing),2026-04-24,2026-04-24
+Supplier C (Warehousing),2026-05-01,2026-05-01
+Supplier C (Warehousing),2026-05-08,2026-05-08
+Supplier C (Warehousing),2026-05-15,2026-05-15
+Supplier C (Warehousing),2026-05-22,2026-05-22
+Supplier C (Warehousing),2026-05-29,2026-05-29
+Supplier C (Warehousing),2026-06-05,2026-06-05
+Supplier C (Warehousing),2026-06-12,2026-06-12
+Supplier C (Warehousing),2026-06-19,2026-06-19
+Supplier D (Pallets),2026-04-03,2026-04-03
+Supplier D (Pallets),2026-04-10,2026-04-10
+Supplier D (Pallets),2026-04-17,2026-04-17
+Supplier D (Pallets),2026-04-24,2026-04-24
+Supplier D (Pallets),2026-05-01,2026-05-01
+Supplier D (Pallets),2026-05-08,2026-05-08
+Supplier D (Pallets),2026-05-15,2026-05-15
+Supplier D (Pallets),2026-05-22,2026-05-24
+Supplier D (Pallets),2026-05-29,2026-06-01
+Supplier D (Pallets),2026-06-05,2026-06-08
+Supplier D (Pallets),2026-06-12,2026-06-12
+Supplier D (Pallets),2026-06-19,2026-06-22
+Supplier E (Freight),2026-04-03,2026-04-03
+Supplier E (Freight),2026-04-10,2026-04-12
+Supplier E (Freight),2026-04-17,2026-04-17
+Supplier E (Freight),2026-04-24,2026-04-24
+Supplier E (Freight),2026-05-01,2026-05-01
+Supplier E (Freight),2026-05-08,2026-05-08
+Supplier E (Freight),2026-05-15,2026-05-17
+Supplier E (Freight),2026-05-22,2026-05-22
+Supplier E (Freight),2026-05-29,2026-05-29
+Supplier E (Freight),2026-06-05,2026-06-05
+Supplier E (Freight),2026-06-12,2026-06-12
+Supplier E (Freight),2026-06-19,2026-06-19`;
+
+    const fileInput = document.getElementById("csv-file");
+    const message = document.getElementById("message");
+    const supplierRows = document.getElementById("supplier-rows");
+    const historyPanel = document.getElementById("history-panel");
+    const resultsButton = document.getElementById("download-results");
+    let deliveryData = [];
+    let supplierResults = [];
+    let selectedSupplier = "";
+
+    // Parse quoted CSV cells, including commas and quote marks inside names.
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let insideQuotes = false;
+
+      for (let index = 0; index < text.length; index += 1) {
+        const character = text[index];
+        if (insideQuotes) {
+          if (character === '"' && text[index + 1] === '"') {
+            cell += '"';
+            index += 1;
+          } else if (character === '"') {
+            insideQuotes = false;
+          } else {
+            cell += character;
+          }
+        } else if (character === '"' && cell.length === 0) {
+          insideQuotes = true;
+        } else if (character === ",") {
+          row.push(cell);
+          cell = "";
+        } else if (character === "\n" || character === "\r") {
+          if (character === "\r" && text[index + 1] === "\n") index += 1;
+          row.push(cell);
+          rows.push(row);
+          row = [];
+          cell = "";
+        } else {
+          cell += character;
+        }
+      }
+
+      if (insideQuotes) throw new Error("A quoted value is not closed. Check the CSV and try again.");
+      if (cell.length > 0 || row.length > 0) {
+        row.push(cell);
+        rows.push(row);
+      }
+      return rows;
+    }
+
+    // Accept only real calendar dates written as YYYY-MM-DD.
+    function isValidDate(value) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+      const date = new Date(value + "T00:00:00Z");
+      return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+    }
+
+    function daysBetween(earlier, later) {
+      const first = Date.parse(earlier + "T00:00:00Z");
+      const second = Date.parse(later + "T00:00:00Z");
+      return Math.max(0, Math.round((second - first) / 86400000));
+    }
+
+    // Validate the columns, discard invalid records, and keep a count for the user.
+    function readDeliveries(text) {
+      const rows = parseCsv(text.replace(/^\uFEFF/, ""));
+      if (rows.length === 0) throw new Error("The CSV is empty. Needed columns: supplier, planned_date, actual_date.");
+
+      const headers = rows[0].map((heading) => heading.trim().toLowerCase());
+      const needed = ["supplier", "planned_date", "actual_date"];
+      const missing = needed.filter((heading) => !headers.includes(heading));
+      if (missing.length > 0) {
+        throw new Error("Needed columns: supplier, planned_date, actual_date. Missing: " + missing.join(", ") + ".");
+      }
+
+      const positions = needed.map((heading) => headers.indexOf(heading));
+      const deliveries = [];
+      let skipped = 0;
+
+      rows.slice(1).forEach((cells) => {
+        if (cells.every((value) => value.trim() === "")) return;
+        const [supplier, plannedDate, actualDate] = positions.map((position) => (cells[position] || "").trim());
+        if (!supplier || !isValidDate(plannedDate) || !isValidDate(actualDate)) {
+          skipped += 1;
+          return;
+        }
+        deliveries.push({
+          supplier,
+          plannedDate,
+          actualDate,
+          daysLate: daysBetween(plannedDate, actualDate)
+        });
+      });
+
+      if (deliveries.length === 0) {
+        throw new Error("No usable delivery rows were found. " + skipped +
+          " row" + (skipped === 1 ? " was" : "s were") +
+          " skipped because the supplier or a date was missing or invalid. Check the columns and use YYYY-MM-DD dates.");
+      }
+      return { deliveries, skipped };
+    }
+
+    function getTrend(deliveries) {
+      if (deliveries.length < 6) return "Stable";
+      const recent = deliveries.slice(-5);
+      const previous = deliveries.slice(-10, -5);
+      if (previous.length === 0) return "Stable";
+      const recentRate = recent.filter((delivery) => delivery.daysLate > 0).length / recent.length;
+      const previousRate = previous.filter((delivery) => delivery.daysLate > 0).length / previous.length;
+      if (recentRate > previousRate) return "Getting worse";
+      if (recentRate < previousRate) return "Improving";
+      return "Stable";
+    }
+
+    // Calculate delivery metrics from each supplier's latest ten planned deliveries.
+    function calculateSuppliers(deliveries) {
+      const grouped = new Map();
+      deliveries.forEach((delivery) => {
+        if (!grouped.has(delivery.supplier)) grouped.set(delivery.supplier, []);
+        grouped.get(delivery.supplier).push(delivery);
+      });
+
+      return Array.from(grouped, ([supplier, allDeliveries]) => {
+        const sorted = allDeliveries.slice().sort((first, second) =>
+          first.plannedDate.localeCompare(second.plannedDate) ||
+          first.actualDate.localeCompare(second.actualDate)
+        );
+        const counted = sorted.slice(-10);
+        const lateDeliveries = counted.filter((delivery) => delivery.daysLate > 0);
+        const lateRate = lateDeliveries.length / counted.length;
+        const averageDaysLate = lateDeliveries.length
+          ? lateDeliveries.reduce((total, delivery) => total + delivery.daysLate, 0) / lateDeliveries.length
+          : 0;
+        const trend = getTrend(counted);
+        let risk = "On track";
+        if (lateRate > 0.30 || (lateRate >= 0.20 && lateRate <= 0.30 && trend === "Getting worse")) {
+          risk = "High risk";
+        } else if (lateRate >= 0.10) {
+          risk = "Watch";
+        }
+        return { supplier, allDeliveries: sorted, counted, lateRate, averageDaysLate, trend, risk };
+      });
+    }
+
+    function riskRank(risk) {
+      return risk === "High risk" ? 3 : risk === "Watch" ? 2 : 1;
+    }
+
+    function showMessage(text) {
+      message.textContent = text;
+      message.classList.add("visible");
+    }
+
+    function clearMessage() {
+      message.textContent = "";
+      message.classList.remove("visible");
+    }
+
+    function addCell(row, text, className) {
+      const cell = document.createElement("td");
+      if (className) cell.className = className;
+      cell.textContent = text;
+      row.appendChild(cell);
+      return cell;
+    }
+
+    function badgeFor(risk) {
+      const badge = document.createElement("span");
+      badge.className = "badge " + (risk === "High risk" ? "badge-red" : risk === "Watch" ? "badge-yellow" : "badge-green");
+      badge.textContent = risk;
+      return badge;
+    }
+
+    function renderHistory(result) {
+      document.getElementById("history-title").textContent = result.supplier + " delivery history";
+      document.getElementById("history-note").textContent = "Newest deliveries are shown first.";
+      const historyRows = document.getElementById("history-rows");
+      historyRows.replaceChildren();
+      result.allDeliveries.slice().reverse().forEach((delivery) => {
+        const row = document.createElement("tr");
+        addCell(row, delivery.plannedDate);
+        addCell(row, delivery.actualDate);
+        addCell(row, String(delivery.daysLate));
+        addCell(row, delivery.daysLate > 0 ? "Yes" : "No", delivery.daysLate > 0 ? "status-late" : "status-on-time");
+        historyRows.appendChild(row);
+      });
+      historyPanel.hidden = false;
+    }
+
+    function renderActions(sortedResults) {
+      const list = document.getElementById("actions-list");
+      list.replaceChildren();
+      if (sortedResults.length === 0) {
+        const note = document.createElement("p");
+        note.className = "empty-note";
+        note.textContent = "No supplier actions to show yet.";
+        list.appendChild(note);
+        return;
+      }
+
+      sortedResults.slice(0, 3).forEach((result) => {
+        const item = document.createElement("article");
+        item.className = "action-item";
+        const top = document.createElement("div");
+        top.className = "action-top";
+        const name = document.createElement("span");
+        name.className = "action-name";
+        name.textContent = result.supplier;
+        top.append(name, badgeFor(result.risk));
+        const action = document.createElement("p");
+        action.className = "action-text";
+        action.textContent = result.risk === "High risk"
+          ? "Call supplier and agree a recovery plan."
+          : result.risk === "Watch"
+            ? "Monitor the next 3 deliveries."
+            : "Keep the current delivery routine and review next week.";
+        item.append(top, action);
+        list.appendChild(item);
+      });
+    }
+
+    // Refresh the dashboard whenever new valid delivery data is loaded.
+    function renderDashboard() {
+      supplierResults = calculateSuppliers(deliveryData).sort((first, second) =>
+        riskRank(second.risk) - riskRank(first.risk) ||
+        second.lateRate - first.lateRate ||
+        second.averageDaysLate - first.averageDaysLate ||
+        first.supplier.localeCompare(second.supplier)
+      );
+
+      const onTimeCount = deliveryData.filter((delivery) => delivery.daysLate === 0).length;
+      document.getElementById("supplier-count").textContent = String(supplierResults.length);
+      document.getElementById("on-time-rate").textContent =
+        Math.round((onTimeCount / deliveryData.length) * 100) + "%";
+      document.getElementById("high-risk-count").textContent =
+        String(supplierResults.filter((result) => result.risk === "High risk").length);
+      document.getElementById("table-note").textContent =
+        deliveryData.length + " valid deliveries · sorted highest risk first";
+      resultsButton.disabled = false;
+
+      supplierRows.replaceChildren();
+      supplierResults.forEach((result) => {
+        const row = document.createElement("tr");
+        row.dataset.supplier = result.supplier;
+        row.tabIndex = 0;
+        row.setAttribute("aria-expanded", String(selectedSupplier === result.supplier));
+        const supplierCell = document.createElement("td");
+        const supplierButton = document.createElement("button");
+        supplierButton.className = "supplier-button";
+        supplierButton.type = "button";
+        supplierButton.textContent = result.supplier;
+        supplierCell.appendChild(supplierButton);
+        row.appendChild(supplierCell);
+        addCell(row, String(result.counted.length));
+        addCell(row, Math.round(result.lateRate * 100) + "%");
+        addCell(row, result.averageDaysLate.toFixed(1));
+        const trendClass = result.trend === "Getting worse"
+          ? "trend-worse"
+          : result.trend === "Improving" ? "trend-improving" : "trend-stable";
+        const trendText = result.trend === "Getting worse" ? "↑ Getting worse"
+          : result.trend === "Improving" ? "↓ Improving" : "→ Stable";
+        addCell(row, trendText, trendClass);
+        const riskCell = document.createElement("td");
+        riskCell.appendChild(badgeFor(result.risk));
+        row.appendChild(riskCell);
+        supplierRows.appendChild(row);
+      });
+
+      renderActions(supplierResults);
+      const selected = supplierResults.find((result) => result.supplier === selectedSupplier);
+      if (selected) renderHistory(selected);
+      else historyPanel.hidden = true;
+    }
+
+    function loadCsv(text) {
+      const parsed = readDeliveries(text);
+      deliveryData = parsed.deliveries;
+      selectedSupplier = "";
+      clearMessage();
+      renderDashboard();
+      if (parsed.skipped > 0) {
+        showMessage(parsed.skipped + " row" + (parsed.skipped === 1 ? " was" : "s were") +
+          " skipped because the supplier or a date was missing or invalid. Dates must use YYYY-MM-DD.");
+      } else {
+        showMessage("Loaded " + deliveryData.length + " valid deliveries.");
+      }
+    }
+
+    // Download the calculated supplier summary without sending data anywhere.
+    function downloadResults() {
+      const rows = [
+        ["supplier", "deliveries_counted", "late_rate_percent", "average_days_late", "trend", "risk_level"],
+        ...supplierResults.map((result) => [
+          result.supplier,
+          String(result.counted.length),
+          String(Math.round(result.lateRate * 100)),
+          result.averageDaysLate.toFixed(1),
+          result.trend,
+          result.risk
+        ])
+      ];
+      const csv = rows.map((row) => row.map((value) =>
+        '"' + value.replace(/"/g, '""') + '"'
+      ).join(",")).join("\r\n");
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      link.download = "supplier-risk-results.csv";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      try {
+        loadCsv(await file.text());
+      } catch (error) {
+        showMessage(error.message);
+      } finally {
+        fileInput.value = "";
+      }
+    });
+
+    document.getElementById("load-sample").addEventListener("click", () => {
+      try {
+        loadCsv(SAMPLE_CSV);
+      } catch (error) {
+        showMessage(error.message);
+      }
+    });
+
+    supplierRows.addEventListener("click", (event) => {
+      const row = event.target.closest("tr[data-supplier]");
+      if (!row) return;
+      const supplier = row.dataset.supplier;
+      selectedSupplier = selectedSupplier === supplier ? "" : supplier;
+      renderDashboard();
+    });
+
+    supplierRows.addEventListener("keydown", (event) => {
+      if ((event.key === "Enter" || event.key === " ") && event.target.matches("tr[data-supplier]")) {
+        event.preventDefault();
+        selectedSupplier = selectedSupplier === event.target.dataset.supplier ? "" : event.target.dataset.supplier;
+        renderDashboard();
+      }
+    });
+
+    resultsButton.addEventListener("click", downloadResults);
+  </script>
+</body>
+</html>
