@@ -1,5 +1,7 @@
 # Supplier Delay Early-Warning
 
+**Live demo:** https://adi29102000-s.github.io/supplier-delay-early-warning/
+
 ## 1. Problem
 
 Some suppliers cause many late deliveries. Checking delivery records by hand can make it hard to notice a problem early.
@@ -30,7 +32,7 @@ The page reads a CSV with `supplier`, `planned_date`, and `actual_date` columns.
 1. Open `index.html` in a recent web browser.
 2. Choose **Load sample data** to try the example, or **Upload CSV** to choose your own CSV.
 3. Select a supplier row to view its delivery history. Use **Download results as CSV** to save the supplier summary.
-4. To publish it, put `index.html` and `sample_data.csv` in the same GitHub repository, then enable GitHub Pages in the repository's **Settings → Pages** section. Choose the main branch and root folder. Your page link will appear there after publishing. Replace `YOUR-USERNAME` and `YOUR-REPOSITORY` in this example with your GitHub details: `https://YOUR-USERNAME.github.io/YOUR-REPOSITORY/`.
+4. The live version is published with GitHub Pages: https://adi29102000-s.github.io/supplier-delay-early-warning/
 
 Your uploaded data is processed locally in your browser and is not sent to GitHub or another service by this page.
 
