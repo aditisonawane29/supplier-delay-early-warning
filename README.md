@@ -1,6 +1,6 @@
 # Supplier Delay Early-Warning
 
-**Live demo:** https://adi29102000-s.github.io/supplier-delay-early-warning/
+**Live demo:** https://aditisonawane29.github.io/supplier-delay-early-warning/
 
 ## 1. Problem
 
