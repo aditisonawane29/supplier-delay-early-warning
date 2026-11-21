@@ -32,7 +32,7 @@ The page reads a CSV with `supplier`, `planned_date`, and `actual_date` columns.
 1. Open `index.html` in a recent web browser.
 2. Choose **Load sample data** to try the example, or **Upload CSV** to choose your own CSV.
 3. Select a supplier row to view its delivery history. Use **Download results as CSV** to save the supplier summary.
-4. The live version is published with GitHub Pages: https://adi29102000-s.github.io/supplier-delay-early-warning/
+4. The live version is published with GitHub Pages: https://aditisonawane29.github.io/supplier-delay-early-warning/
 
 Your uploaded data is processed locally in your browser and is not sent to GitHub or another service by this page.
 
